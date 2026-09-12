@@ -324,8 +324,13 @@ details.gh-config[open] summary::before{ content:"▾ "; }
   #print-area h1{ font-size:20px; margin-bottom:4px; }
   #print-area h2{ font-size:14px; margin:18px 0 8px; color:#333; }
   .print-table{ width:100%; border-collapse:collapse; margin-bottom:6px; }
-  .print-table th, .print-table td{ border:1px solid #999; padding:6px 8px; font-size:11px; text-align:left; }
+  .print-table th, .print-table td{ border:1px solid #999; padding:6px 8px; font-size:11px; text-align:left; vertical-align:top; }
   .print-table th{ background:#eee; }
+
+  .grid-table td.row-label, .grid-table th.corner-cell{ background:#f3f3f3; font-weight:700; white-space:nowrap; }
+  .grid-table .cell-subject{ font-weight:700; font-size:11px; }
+  .grid-table .cell-topic{ font-style:italic; font-size:10px; color:#333; margin:3px 0; }
+  .grid-table .cell-room{ font-size:10px; color:#555; }
 }
 
 @media (max-width: 620px){
