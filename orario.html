@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Orario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="display" id="project-label">Orario</span>
+      <span class="sub" id="week-count-label"></span>
+    </div>
+    <div class="actions">
+      <span class="sync-pill" id="sync-pill"><span class="dot"></span><span class="label">—</span></span>
+      <button class="btn ghost" id="btnExportWord">Word</button>
+      <button class="btn ghost" id="btnExportPdf">PDF</button>
+      <button class="btn ghost" id="btnSettings">Impostazioni</button>
+      <button class="btn" id="btnImport">Importa</button>
+      <button class="btn primary" id="btnAdd">+ Lezione</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="empty-state" hidden>
+      <h2>Nessuna lezione ancora</h2>
+      <p>Incolla il tuo orario così com'è — anche disordinato — oppure aggiungi le lezioni una a una.</p>
+      <pre id="example-format"></pre>
+      <div class="row">
+        <button class="btn primary" id="btnImportEmpty">Importa orario</button>
+        <button class="btn ghost" id="btnAddEmpty">Aggiungi manualmente</button>
+      </div>
+    </div>
+
+    <div id="grid-area" hidden>
+      <div class="week-meta">
+        <div class="title">Settimana</div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div id="grid-scroll">
+        <div id="grid"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="print-area"></div>
+
+<div id="scrim"></div>
+
+<!-- Sheet: import -->
+<div class="sheet" id="sheet-import">
+  <div class="sheet-head">
+    <h2>Importa orario</h2>
+    <button class="icon-btn" data-close="import" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="hint-box">
+      Una lezione per riga. Riconosco automaticamente giorno, orario, materia, docente e aula, in quasi qualsiasi ordine — es. <code>Lun 8:00-9:00 Matematica - Rossi - Aula 3</code> oppure <code>Martedì 10-11 Inglese Prof. Verdi</code>. Parole chiave utili: <code>Aula</code>, <code>Prof.</code>
+    </div>
+    <textarea id="import-text" placeholder="Incolla qui il tuo orario..."></textarea>
+    <div style="margin-top:12px; display:flex; gap:10px;">
+      <button class="btn primary" id="btnParse">Analizza</button>
+      <button class="btn ghost" id="btnFillExample">Usa esempio</button>
+    </div>
+    <div id="import-preview"></div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn ghost" data-close="import">Annulla</button>
+    <button class="btn primary" id="btnConfirmImport" disabled>Aggiungi alla settimana</button>
+  </div>
+</div>
+
+<!-- Sheet: edit / add lesson -->
+<div class="sheet" id="sheet-edit">
+  <div class="sheet-head">
+    <h2 id="edit-title">Nuova lezione</h2>
+    <button class="icon-btn" data-close="edit" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>Giorno</label>
+      <div class="day-toggle-row" id="edit-day-row"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Inizio</label>
+        <input type="time" id="f-start" step="300">
+      </div>
+      <div class="field">
+        <label>Fine</label>
+        <input type="time" id="f-end" step="300">
+      </div>
+    </div>
+    <div class="field">
+      <label>Materia</label>
+      <input type="text" id="f-subject" list="subject-list" placeholder="es. Matematica">
+      <datalist id="subject-list"></datalist>
+      <div class="swatches" id="f-swatches"></div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Docente</label>
+        <input type="text" id="f-teacher" placeholder="es. M. Rossi">
+      </div>
+      <div class="field">
+        <label>Aula</label>
+        <input type="text" id="f-room" placeholder="es. Aula 3">
+      </div>
+    </div>
+    <div class="field">
+      <label>Argomento di oggi</label>
+      <textarea id="f-topic" placeholder="Cosa state facendo in questo momento in questa materia..."></textarea>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn danger-text" id="btnDelete">Elimina</button>
+    <button class="btn primary" id="btnSaveLesson">Salva</button>
+  </div>
+</div>
+
+<!-- Sheet: settings -->
+<div class="sheet" id="sheet-settings">
+  <div class="sheet-head">
+    <h2>Impostazioni</h2>
+    <button class="icon-btn" data-close="settings" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>Giorni di scuola</label>
+      <div class="day-toggle-row" id="settings-day-row"></div>
+    </div>
+
+    <div class="section-label">Sincronizzazione</div>
+    <button class="btn ghost" id="btnSyncNow" style="width:100%; margin-bottom:8px;">Sincronizza ora con GitHub</button>
+    <button class="btn ghost" id="btnChangeProject" style="width:100%;">Cambia progetto / impostazioni GitHub</button>
+
+    <div class="section-label">Dati</div>
+    <button class="btn ghost" id="btnResetAsk" style="width:100%;">Cancella tutto l'orario</button>
+    <div id="reset-confirm" hidden style="margin-top:10px; padding:12px; background:#FFF4F3; border:1px solid #FBD8D5; border-radius:var(--radius-s);">
+      <p style="margin:0 0 10px; font-size:13px; color:#B23A3A;">Questa azione non si può annullare. Confermi?</p>
+      <div style="display:flex; gap:8px;">
+        <button class="btn" id="btnResetConfirm" style="background:#E24C4C; color:#fff;">Sì, cancella</button>
+        <button class="btn ghost" id="btnResetCancel">Annulla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/storage.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

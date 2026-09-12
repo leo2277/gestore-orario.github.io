@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Orario — inizia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/theme.css">
+</head>
+<body>
+<div class="center-wrap">
+  <div class="auth-card">
+    <div class="eyebrow">Orario studente</div>
+    <h1 id="heading">Come si chiama il tuo orario?</h1>
+    <p class="lead">Il nome del progetto tiene separati i tuoi dati da quelli di chiunque altro usi questo stesso sito — sia nel browser, sia (se lo attivi) nel file su GitHub.</p>
+
+    <div class="field">
+      <label for="f-project">Nome progetto</label>
+      <input type="text" id="f-project" placeholder="es. orario-leo-3a" autocomplete="off">
+      <div class="help">Usalo come lo chiameresti in una cartella: senza spazi strani, meglio se breve.</div>
+    </div>
+
+    <details class="gh-config" id="gh-details">
+      <summary>Sincronizza con GitHub (opzionale)</summary>
+      <div style="padding-top:12px;">
+        <div class="callout info">
+          Se lo configuri, l'orario viene letto e salvato in <code>data/&lt;progetto&gt;.json</code> dentro il repository che indichi, così lo ritrovi identico da qualsiasi dispositivo. Senza questo, l'orario resta solo su questo browser.
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-owner">Utente / organizzazione</label>
+            <input type="text" id="f-owner" placeholder="es. leo2277" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-repo">Repository</label>
+            <input type="text" id="f-repo" placeholder="es. gestore-orario.github.io" autocomplete="off">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-branch">Branch</label>
+            <input type="text" id="f-branch" placeholder="main" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-token">Token di accesso</label>
+            <input type="password" id="f-token" placeholder="github_pat_..." autocomplete="off">
+          </div>
+        </div>
+        <div class="callout warn">
+          Il token resta salvato solo nel tuo browser (mai su GitHub), ma chiunque abbia accesso a questo computer o apra la console del browser potrebbe leggerlo. Crea un <strong>fine-grained token</strong> limitato a questo solo repository, con permesso <strong>Contents: Read and write</strong>, da <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>.
+        </div>
+      </div>
+    </details>
+
+    <div class="row" style="display:flex; gap:10px; margin-top:22px; flex-wrap:wrap;">
+      <button class="btn primary" id="btnStart">Apri il mio orario</button>
+      <button class="btn ghost" id="btnForget" hidden>Dimentica queste impostazioni</button>
+    </div>
+    <div id="msg" class="field" style="margin-top:14px; display:none;"></div>
+  </div>
+</div>
+
+<script src="assets/storage.js"></script>
+<script>
+(function(){
+  "use strict";
+  var cfg = OrarioStorage.getConfig();
+  if(cfg){
+    document.getElementById("f-project").value = cfg.projectName || "";
+    if(cfg.gh){
+      document.getElementById("f-owner").value = cfg.gh.owner || "";
+      document.getElementById("f-repo").value = cfg.gh.repo || "";
+      document.getElementById("f-branch").value = cfg.gh.branch || "";
+      document.getElementById("f-token").value = cfg.gh.token || "";
+      if(cfg.gh.owner || cfg.gh.repo || cfg.gh.token) document.getElementById("gh-details").open = true;
+    }
+    document.getElementById("heading").textContent = "Bentornato";
+    document.getElementById("btnStart").textContent = "Continua con \"" + cfg.projectName + "\"";
+    document.getElementById("btnForget").hidden = false;
+  }
+
+  function showMsg(text, isError){
+    var el = document.getElementById("msg");
+    el.style.display = "block";
+    el.style.color = isError ? "#B23A3A" : "var(--ink-soft)";
+    el.textContent = text;
+  }
+
+  document.getElementById("btnStart").addEventListener("click", function(){
+    var project = document.getElementById("f-project").value.trim();
+    if(!project){ showMsg("Serve un nome per il progetto.", true); document.getElementById("f-project").focus(); return; }
+
+    var owner = document.getElementById("f-owner").value.trim();
+    var repo = document.getElementById("f-repo").value.trim();
+    var branch = document.getElementById("f-branch").value.trim() || "main";
+    var token = document.getElementById("f-token").value.trim();
+
+    var gh = null;
+    if(owner || repo || token){
+      if(!owner || !repo || !token){
+        showMsg("Per la sincronizzazione GitHub servono utente, repository e token, oppure lasciali tutti vuoti.", true);
+        return;
+      }
+      gh = { owner: owner, repo: repo, branch: branch, token: token };
+    }
+
+    OrarioStorage.setConfig({ projectName: project, gh: gh });
+    window.location.href = "orario.html";
+  });
+
+  document.getElementById("btnForget").addEventListener("click", function(){
+    OrarioStorage.clearConfig();
+    window.location.reload();
+  });
+})();
+</script>
+</body>
+</html>
