@@ -18,8 +18,7 @@
     </div>
     <div class="actions">
       <span class="sync-pill" id="sync-pill"><span class="dot"></span><span class="label">—</span></span>
-      <button class="btn ghost" id="btnExportWord">Word</button>
-      <button class="btn ghost" id="btnExportPdf">PDF</button>
+      <button class="btn ghost" id="btnExport">Esporta</button>
       <button class="btn ghost" id="btnSettings">Impostazioni</button>
       <button class="btn" id="btnImport">Importa</button>
       <button class="btn primary" id="btnAdd">+ Lezione</button>
@@ -121,6 +120,36 @@
   <div class="sheet-foot">
     <button class="btn danger-text" id="btnDelete">Elimina</button>
     <button class="btn primary" id="btnSaveLesson">Salva</button>
+  </div>
+</div>
+
+<!-- Sheet: export -->
+<div class="sheet" id="sheet-export">
+  <div class="sheet-head">
+    <h2>Esporta orario</h2>
+    <button class="icon-btn" data-close="export" aria-label="Chiudi">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>Stile</label>
+      <div class="day-toggle-row" id="export-style-row">
+        <button type="button" class="day-toggle on" data-value="grid">Griglia classica</button>
+        <button type="button" class="day-toggle" data-value="list">Elenco per giorno</button>
+      </div>
+      <div class="help">La griglia mostra i giorni in alto e le ore a sinistra: ogni cella ha materia, argomento e aula. L'elenco mostra invece una tabella per giorno con anche il docente.</div>
+    </div>
+    <div class="field">
+      <label>Formato file</label>
+      <div class="day-toggle-row" id="export-format-row">
+        <button type="button" class="day-toggle on" data-value="pdf">PDF</button>
+        <button type="button" class="day-toggle" data-value="word">Word</button>
+      </div>
+      <div class="help">PDF apre la finestra di stampa del browser (scegli "Salva come PDF"). Word scarica un file .doc pronto.</div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn ghost" data-close="export">Annulla</button>
+    <button class="btn primary" id="btnExportGo">Esporta</button>
   </div>
 </div>
 
