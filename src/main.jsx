@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'https://esm.sh/react@18.3.1';
 import { createRoot } from 'https://esm.sh/react-dom@18.3.1/client';
 import { CalendarDays, ChevronLeft, ChevronRight, Download, FileUp, MapPin, MoreHorizontal, Plus, Settings2, Sparkles, X } from 'https://esm.sh/lucide-react@0.468.0?external=react';
-import './style.css';
 
 const DAYS = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì'];
 const SHORT = ['LUN','MAR','MER','GIO','VEN'];
