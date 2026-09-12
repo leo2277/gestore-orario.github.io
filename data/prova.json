@@ -1,72 +1,5 @@
 {
-  "lessons": [
-    {
-      "id": "lmtyj31um4u117",
-      "day": 0,
-      "start": 480,
-      "end": 540,
-      "subject": "ì   Matematica",
-      "teacher": "Rossi",
-      "room": "Aula 3",
-      "topic": "",
-      "color": "#E8604C"
-    },
-    {
-      "id": "lmtyj31um4fev8",
-      "day": 0,
-      "start": 540,
-      "end": 600,
-      "subject": "ì   Italiano Bianchi",
-      "teacher": "",
-      "room": "",
-      "topic": "",
-      "color": "#B4562E"
-    },
-    {
-      "id": "lmtyj31um4ihf1",
-      "day": 1,
-      "start": 600,
-      "end": 690,
-      "subject": "ì   Inglese",
-      "teacher": "Verdi",
-      "room": "Aula 5",
-      "topic": "",
-      "color": "#8B5CF6"
-    },
-    {
-      "id": "lmtyj31um7sbfz",
-      "day": 2,
-      "start": 480,
-      "end": 540,
-      "subject": "ì   Storia",
-      "teacher": "",
-      "room": "",
-      "topic": "",
-      "color": "#3562E9"
-    },
-    {
-      "id": "lmtyj31umb7f2b",
-      "day": 3,
-      "start": 660,
-      "end": 720,
-      "subject": "ì   Scienze",
-      "teacher": "ssa Neri",
-      "room": "Lab 2",
-      "topic": "",
-      "color": "#16A3A3"
-    },
-    {
-      "id": "lmtyj31umjzb61",
-      "day": 4,
-      "start": 540,
-      "end": 600,
-      "subject": "ì   Matematica",
-      "teacher": "Rossi",
-      "room": "Aula 3",
-      "topic": "",
-      "color": "#E8604C"
-    }
-  ],
+  "lessons": [],
   "activeDays": [
     true,
     true,
@@ -75,17 +8,5 @@
     true,
     false
   ],
-  "subjectColors": {
-    "ì   greco": "#3562E9",
-    "ì   matematica": "#E8604C",
-    "ì   latino": "#2F9E6E",
-    "ì   italiano": "#E8A23C",
-    "ì   inglese": "#8B5CF6",
-    "ì   scienze": "#16A3A3",
-    "ì   motorie": "#E2568B",
-    "ì   geostoria": "#7A8B3C",
-    "ì   religione": "#5B6B8C",
-    "ì   italiano bianchi": "#B4562E",
-    "ì   storia": "#3562E9"
-  }
+  "subjectColors": {}
 }
