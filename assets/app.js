@@ -124,7 +124,10 @@
   }
 
   // ---------------- parser ----------------
-  var DAY_REGEX = /\b(lun(?:ed[iì])?|mar(?:ted[iì])?|mer(?:coled[iì])?|gio(?:ved[iì])?|ven(?:erd[iì])?|sab(?:ato)?)[a-zàèìòù]*\b/i;
+  // Niente \b finale: con le vocali accentate JS considera "ì" un carattere "non di parola",
+  // quindi \b dopo "edì" falliva e il motore retrocedeva lasciando la ì fuori dal match (bug: "ì Italiano").
+  // Si usano lookaround espliciti che escludono un'altra lettera (anche accentata) prima/dopo il giorno.
+  var DAY_REGEX = /(?<![a-zà-ù])(lun(?:ed[iì])?|mar(?:ted[iì])?|mer(?:coled[iì])?|gio(?:ved[iì])?|ven(?:erd[iì])?|sab(?:ato)?)(?![a-zà-ù])/i;
   var DAY_KEY_MAP = { lun: 0, mar: 1, mer: 2, gio: 3, ven: 4, sab: 5 };
   var TIME_REGEX = /(\d{1,2})[:.,]?(\d{2})?\s*(?:-|–|—|a|\/)\s*(\d{1,2})[:.,]?(\d{2})?/i;
   var ROOM_REGEX = /^(aula|lab(?:oratorio)?)\b\.?\s*/i;
@@ -557,52 +560,185 @@
     window.location.href = "index.html";
   });
 
-  // ---------------- export: PDF (stampa) ----------------
-  function prepareAndPrint() {
+  // ---------------- export: helpers condivisi ----------------
+
+  // Costruisce le "fette" di tempo minime (unione di tutti gli inizi/fine lezione)
+  // così una lezione doppia occupa correttamente più righe (rowspan) nella griglia.
+  function buildScheduleSlices() {
     var days = activeDayIndices();
-    var html = "<h1>" + escapeHtml(cfg.projectName) + " — Orario settimanale</h1>";
+    var boundariesSet = new Set();
+    state.lessons.forEach(function (l) {
+      if (days.indexOf(l.day) === -1) return;
+      boundariesSet.add(l.start);
+      boundariesSet.add(l.end);
+    });
+    var boundaries = Array.from(boundariesSet).sort(function (a, b) { return a - b; });
+    var allSlices = [];
+    for (var i = 0; i < boundaries.length - 1; i++) allSlices.push({ start: boundaries[i], end: boundaries[i + 1] });
+
+    function coveringLesson(day, slice) {
+      var found = null;
+      state.lessons.forEach(function (l) {
+        if (l.day === day && l.start <= slice.start && l.end >= slice.end) found = l;
+      });
+      return found;
+    }
+
+    var slices = allSlices.filter(function (slice) {
+      return days.some(function (d) { return !!coveringLesson(d, slice); });
+    });
+
+    return { days: days, slices: slices, coveringLesson: coveringLesson };
+  }
+
+  // Renderizza una griglia classica: giorni come colonne, orari a sinistra, una cella per lezione.
+  function renderGridTable(cellRenderer, tableAttrs) {
+    var g = buildScheduleSlices();
+    if (!g.slices.length) return "<p>Nessuna lezione da esportare.</p>";
+
+    var spanMap = {};
+    g.days.forEach(function (d) {
+      var idx = 0;
+      while (idx < g.slices.length) {
+        var lesson = g.coveringLesson(d, g.slices[idx]);
+        if (!lesson) { spanMap[d + "_" + idx] = null; idx++; continue; }
+        var span = 1;
+        while (idx + span < g.slices.length) {
+          var next = g.coveringLesson(d, g.slices[idx + span]);
+          if (!next || next.id !== lesson.id) break;
+          span++;
+        }
+        spanMap[d + "_" + idx] = { span: span, lesson: lesson };
+        for (var k = 1; k < span; k++) spanMap[d + "_" + (idx + k)] = "skip";
+        idx += span;
+      }
+    });
+
+    var html = "<table " + (tableAttrs || "") + '><thead><tr><th class="corner-cell">Ora</th>';
+    g.days.forEach(function (d) { html += "<th>" + DAY_FULL[d] + "</th>"; });
+    html += "</tr></thead><tbody>";
+
+    g.slices.forEach(function (slice, sliceIdx) {
+      html += '<tr><td class="row-label">' + minToHHMM(slice.start) + "–" + minToHHMM(slice.end) + "</td>";
+      g.days.forEach(function (d) {
+        var entry = spanMap[d + "_" + sliceIdx];
+        if (entry === "skip") return;
+        if (!entry) { html += "<td></td>"; return; }
+        html += '<td rowspan="' + entry.span + '">' + cellRenderer(entry.lesson) + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table>";
+    return html;
+  }
+
+  function listStyleBody(cellClass) {
+    var days = activeDayIndices();
+    var html = "";
     days.forEach(function (d) {
       var dayLessons = state.lessons.filter(function (l) { return l.day === d; }).sort(function (a, b) { return a.start - b.start; });
       if (!dayLessons.length) return;
-      html += "<h2>" + DAY_FULL[d] + "</h2><table class=\"print-table\"><thead><tr><th>Orario</th><th>Materia</th><th>Docente</th><th>Aula</th><th>Argomento</th></tr></thead><tbody>";
+      html += "<h2>" + DAY_FULL[d] + "</h2><table " + (cellClass || "") + "><thead><tr><th>Orario</th><th>Materia</th><th>Docente</th><th>Aula</th><th>Argomento</th></tr></thead><tbody>";
       dayLessons.forEach(function (l) {
         html += "<tr><td>" + minToHHMM(l.start) + "–" + minToHHMM(l.end) + "</td><td>" + escapeHtml(l.subject) + "</td><td>" + escapeHtml(l.teacher || "") + "</td><td>" + escapeHtml(l.room || "") + "</td><td>" + escapeHtml(l.topic || "") + "</td></tr>";
       });
       html += "</tbody></table>";
     });
+    return html;
+  }
+
+  function gridCellHtmlPrint(l) {
+    return (
+      '<div class="cell-subject">' + escapeHtml(l.subject.toUpperCase()) + "</div>" +
+      (l.topic ? '<div class="cell-topic">' + escapeHtml(l.topic) + "</div>" : "") +
+      (l.room ? '<div class="cell-room">' + escapeHtml(l.room) + "</div>" : "")
+    );
+  }
+  function gridCellHtmlWord(l) {
+    return (
+      '<div style="font-weight:700;">' + escapeHtml(l.subject.toUpperCase()) + "</div>" +
+      (l.topic ? '<div style="font-style:italic;font-size:9.5pt;margin:2px 0;">' + escapeHtml(l.topic) + "</div>" : "") +
+      (l.room ? '<div style="font-size:9pt;color:#555;">' + escapeHtml(l.room) + "</div>" : "")
+    );
+  }
+
+  function exportTitle() {
+    return "<h1>" + escapeHtml(cfg.projectName) + " — Orario settimanale</h1>";
+  }
+
+  // ---------------- export: PDF (stampa) ----------------
+  function prepareAndPrint(style) {
+    var html = exportTitle();
+    if (style === "grid") {
+      html += renderGridTable(gridCellHtmlPrint, 'class="print-table grid-table"');
+    } else {
+      html += listStyleBody('class="print-table"');
+    }
     document.getElementById("print-area").innerHTML = html;
     window.print();
   }
-  document.getElementById("btnExportPdf").addEventListener("click", prepareAndPrint);
 
   // ---------------- export: Word (.doc leggibile da Word) ----------------
-  function exportWord() {
-    var days = activeDayIndices();
+  function exportWord(style) {
     var bodyHtml = '<h1 style="font-family:Calibri,Arial,sans-serif;">' + escapeHtml(cfg.projectName) + " — Orario settimanale</h1>";
-    days.forEach(function (d) {
-      var dayLessons = state.lessons.filter(function (l) { return l.day === d; }).sort(function (a, b) { return a.start - b.start; });
-      if (!dayLessons.length) return;
-      bodyHtml += '<h2 style="font-family:Calibri,Arial,sans-serif;">' + DAY_FULL[d] + "</h2>";
-      bodyHtml += '<table style="border-collapse:collapse;width:100%;font-family:Calibri,Arial,sans-serif;font-size:11pt;" border="1" cellspacing="0" cellpadding="6">';
-      bodyHtml += '<tr style="background:#3562E9;color:#ffffff;"><th>Orario</th><th>Materia</th><th>Docente</th><th>Aula</th><th>Argomento</th></tr>';
-      dayLessons.forEach(function (l) {
-        bodyHtml += "<tr><td>" + minToHHMM(l.start) + "–" + minToHHMM(l.end) + "</td><td>" + escapeHtml(l.subject) + "</td><td>" + escapeHtml(l.teacher || "") + "</td><td>" + escapeHtml(l.room || "") + "</td><td>" + escapeHtml(l.topic || "") + "</td></tr>";
+    var tableAttrs = 'style="border-collapse:collapse;width:100%;font-family:Calibri,Arial,sans-serif;font-size:10.5pt;" border="1" cellspacing="0" cellpadding="6"';
+
+    if (style === "grid") {
+      // Word (.doc) ignora le classi CSS in modo affidabile: gli stessi th/td vengono
+      // ricoloriti qui con stile inline dopo aver generato la tabella.
+      bodyHtml += renderGridTable(gridCellHtmlWord, tableAttrs)
+        .replace(/<th class="corner-cell">/g, '<th style="background:#3562E9;color:#fff;padding:6px;">')
+        .replace(/<th>/g, '<th style="background:#3562E9;color:#fff;padding:6px;">')
+        .replace(/<td class="row-label">/g, '<td style="background:#EEF1F6;font-weight:700;white-space:nowrap;padding:6px;">');
+    } else {
+      var days = activeDayIndices();
+      days.forEach(function (d) {
+        var dayLessons = state.lessons.filter(function (l) { return l.day === d; }).sort(function (a, b) { return a.start - b.start; });
+        if (!dayLessons.length) return;
+        bodyHtml += '<h2 style="font-family:Calibri,Arial,sans-serif;">' + DAY_FULL[d] + "</h2>";
+        bodyHtml += "<table " + tableAttrs + ">";
+        bodyHtml += '<tr style="background:#3562E9;color:#ffffff;"><th>Orario</th><th>Materia</th><th>Docente</th><th>Aula</th><th>Argomento</th></tr>';
+        dayLessons.forEach(function (l) {
+          bodyHtml += "<tr><td>" + minToHHMM(l.start) + "–" + minToHHMM(l.end) + "</td><td>" + escapeHtml(l.subject) + "</td><td>" + escapeHtml(l.teacher || "") + "</td><td>" + escapeHtml(l.room || "") + "</td><td>" + escapeHtml(l.topic || "") + "</td></tr>";
+        });
+        bodyHtml += "</table><br/>";
       });
-      bodyHtml += "</table><br/>";
-    });
+    }
+
     var docHtml =
       '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
       "<head><meta charset=\"utf-8\"><title>" + escapeHtml(cfg.projectName) + "</title></head><body>" + bodyHtml + "</body></html>";
     var blob = new Blob(["\ufeff", docHtml], { type: "application/msword" });
     var link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = (cfg.projectName || "orario").replace(/\s+/g, "_") + ".doc";
+    link.download = (cfg.projectName || "orario").replace(/\s+/g, "_") + (style === "grid" ? "_griglia" : "") + ".doc";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
   }
-  document.getElementById("btnExportWord").addEventListener("click", exportWord);
+
+  // ---------------- sheet: scelta stile/formato export ----------------
+  var exportChoice = { style: "grid", format: "pdf" };
+
+  function wireExportToggle(rowId, key) {
+    var row = document.getElementById(rowId);
+    Array.from(row.children).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        exportChoice[key] = btn.dataset.value;
+        Array.from(row.children).forEach(function (b) { b.classList.toggle("on", b === btn); });
+      });
+    });
+  }
+  wireExportToggle("export-style-row", "style");
+  wireExportToggle("export-format-row", "format");
+
+  document.getElementById("btnExport").addEventListener("click", function () { openSheet("export"); });
+  document.getElementById("btnExportGo").addEventListener("click", function () {
+    if (exportChoice.format === "pdf") prepareAndPrint(exportChoice.style);
+    else exportWord(exportChoice.style);
+    closeSheet("export");
+  });
 
   // ---------------- top actions ----------------
   document.getElementById("btnImport").addEventListener("click", function () { openSheet("import"); });
